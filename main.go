@@ -22,8 +22,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	//newStudentRepository(db)
 
-	students, err := getAllStudent(db)
+}
+
+type studentRepository struct {
+	db *gorm.DB
+}
+
+func newStudentRepository(db *gorm.DB) {
+	repo := new(studentRepository)
+	repo.db = db
+	repo.run()
+}
+func (r *studentRepository) run() {
+	students, err := r.getAllStudent()
 	if err != nil {
 		panic(err)
 	}
@@ -31,7 +44,7 @@ func main() {
 		fmt.Println(student.ToString())
 	}
 	fmt.Println("=========================================")
-	students, err = GetStudentByName(db, "R")
+	students, err = r.getStudentByName("R")
 	if err != nil {
 		panic(err)
 	}
@@ -48,45 +61,43 @@ func main() {
 		IdCard:   "333",
 		Senior:   true,
 	}
-	newStudent, err := CreateStudent(db, student)
+	newStudent, err := r.createStudent(student)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(newStudent.ToString())
 
 	fmt.Println("=========================================")
-	err = DeleteStudent(db, 10)
+	err = r.deleteStudent(10)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Success Delete")
-
 }
-func getAllStudent(db *gorm.DB) ([]Student, error) {
+func (r *studentRepository) getAllStudent() ([]Student, error) {
 	students := make([]Student, 0)
-	err := db.Find(&students).Error
+	err := r.db.Find(&students).Error
 	if err != nil {
 		return nil, err
 	}
 	return students, nil
 }
-func GetStudentByName(db *gorm.DB, name string) ([]Student, error) {
+func (r *studentRepository) getStudentByName(name string) ([]Student, error) {
 	students := make([]Student, 0)
-	err := db.Where("Name LIKE ?", fmt.Sprintf("%%%s%%", name)).Find(&students).Error
+	err := r.db.Where("Name LIKE ?", fmt.Sprintf("%%%s%%", name)).Find(&students).Error
 	if err != nil {
 		return nil, err
 	}
 	return students, nil
 }
-func CreateStudent(db *gorm.DB, student Student) (*Student, error) {
-	err := db.Create(&student).Error
+func (r *studentRepository) createStudent(student Student) (*Student, error) {
+	err := r.db.Create(&student).Error
 	if err != nil {
 		return nil, err
 	}
 	return &student, nil
 }
-
-func DeleteStudent(db *gorm.DB, id int) error {
-	err := db.Delete(&Student{}, id).Error
+func (r *studentRepository) deleteStudent(id int) error {
+	err := r.db.Delete(&Student{}, id).Error
 	return err
 }
