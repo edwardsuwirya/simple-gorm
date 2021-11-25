@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -20,6 +21,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	err = db.AutoMigrate(&Student{}, &Product{}, &Category{}, &UserInfo{}, &UserCredential{})
 	enigmaDb, err := db.DB()
 	defer func(enigmaDb *sql.DB) {
 		err := enigmaDb.Close()
@@ -36,7 +38,148 @@ func main() {
 		panic(err)
 	}
 	//newStudentRepository(db)
-	newInventoryRepository(db)
+	//newInventoryRepository(db)
+	newUserInfoRepository(db)
+}
+
+type userInfoRepository struct {
+	db *gorm.DB
+}
+
+func newUserInfoRepository(db *gorm.DB) {
+	repo := new(userInfoRepository)
+	repo.db = db
+	repo.run()
+}
+func (r *userInfoRepository) run() {
+	//newUser, err := r.CreateUser(UserInfo{
+	//	FirstName: "Tika",
+	//	LastName:  "Yesi",
+	//	IdCard:    "922-933",
+	//	Gender:    "F",
+	//	Email:     "tika.yesi@corp.com",
+	//	UserCredential: UserCredential{
+	//		UserName:     "tika.yesi",
+	//		UserPassword: "889911",
+	//		IsBlocked:    false,
+	//	},
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Println(newUser.ToString())
+	//isUserExist, _ := r.UserValidation("berty.tanasale", "12345")
+	//
+	//fmt.Println("is valid", isUserExist)
+
+	//userInfo, err := r.FindUserById(3)
+	//if err != nil {
+	//	if errors.Is(err, gorm.ErrRecordNotFound) {
+	//		fmt.Println("Not found")
+	//		return
+	//	}
+	//	panic(err)
+	//}
+	//fmt.Println(userInfo.ToString())
+	//userInfo, err := r.FindUserById(3)
+	//if err != nil {
+	//	if errors.Is(err, gorm.ErrRecordNotFound) {
+	//		fmt.Println("Not found")
+	//		return
+	//	}
+	//	panic(err)
+	//}
+	//fmt.Println(userInfo.ToString())
+	//userInfo, err := r.FindUserByCondition(UserInfo{
+	//	Gender: "M",
+	//})
+	//if err != nil {
+	//	if errors.Is(err, gorm.ErrRecordNotFound) {
+	//		fmt.Println("Not found")
+	//		return
+	//	}
+	//	panic(err)
+	//}
+	//userInfo, err := r.FindUserDocument(4)
+	//if err != nil {
+	//	if errors.Is(err, gorm.ErrRecordNotFound) {
+	//		fmt.Println("Not found")
+	//		return
+	//	}
+	//	panic(err)
+	//}
+	//fmt.Println(userInfo)
+	totalUserByGender, err := r.TotalUserGroupByGender()
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("Not found")
+			return
+		}
+		panic(err)
+	}
+	fmt.Println(totalUserByGender)
+}
+func (r *userInfoRepository) CreateUser(user UserInfo) (*UserInfo, error) {
+	if err := r.db.Create(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+func (r *userInfoRepository) FindUserById(id int) (*UserInfo, error) {
+	var user UserInfo
+	if err := r.db.First(&user, "id=?", id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+type userDoc struct {
+	IdCard string
+	Email  string
+}
+
+func (r *userInfoRepository) FindUserByCondition(useCriteria UserInfo) ([]userDoc, error) {
+	var userDoc []userDoc
+	err := r.db.Model(&UserInfo{}).Where(&useCriteria).Find(&userDoc).Error
+	if err != nil {
+		return nil, err
+	}
+	return userDoc, nil
+}
+
+func (r *userInfoRepository) FindUserDocument(id int) ([]userDoc, error) {
+	var userDoc []userDoc
+	err := r.db.Table("user_infos").Select("id_card", "email").Where("id=?", id).Scan(&userDoc).Error
+	if err != nil {
+		return nil, err
+	}
+	return userDoc, nil
+}
+
+type Result struct {
+	Gender string
+	Total  int64
+}
+
+func (r *userInfoRepository) TotalUserGroupByGender() ([]Result, error) {
+	var result []Result
+	err := r.db.Table("user_infos").Select("gender", "count(id) as total").Group("gender").Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (r *userInfoRepository) UserValidation(userName string, password string) (bool, error) {
+	var userCount int64
+	err := r.db.Table("user_credentials").Where("user_name=? AND user_password=? AND is_blocked=false", userName, password).Count(&userCount).Error
+	if err != nil {
+		return false, err
+	}
+	if userCount == 1 {
+		return true, nil
+	}
+	return false, nil
 }
 
 type studentRepository struct {
