@@ -33,7 +33,6 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
-	err = db.AutoMigrate(&Student{}, &Product{}, &Category{})
 	if err != nil {
 		panic(err)
 	}
