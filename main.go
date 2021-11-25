@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -19,6 +20,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	enigmaDb, err := db.DB()
+	defer func(enigmaDb *sql.DB) {
+		err := enigmaDb.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(enigmaDb)
+	//err = enigmaDb.Ping()
+	//if err != nil {
+	//	panic(err)
+	//}
 	err = db.AutoMigrate(&Student{}, &Product{}, &Category{})
 	if err != nil {
 		panic(err)
@@ -143,36 +155,55 @@ func (i *inventoryRepository) run() {
 	//	panic(err)
 	//}
 	//fmt.Println(product.ToString())
-	//fmt.Printf("%s\n", strings.Repeat("=", 50))
-	//products, err := i.getProductWithCategory()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//for _, product := range products {
-	//	fmt.Println(product.ToString())
-	//}
-
 	fmt.Printf("%s\n", strings.Repeat("=", 50))
-	categories, err := i.getCategories()
+	products, err := i.getProductWithCategory()
 	if err != nil {
 		panic(err)
 	}
-	for _, category := range categories {
-		fmt.Println(category.ToString())
+	for _, product := range products {
+		fmt.Println(product.ToString())
 	}
+
+	//fmt.Printf("%s\n", strings.Repeat("=", 50))
+	//categories, err := i.getCategories()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//for _, category := range categories {
+	//	fmt.Println(category.ToString())
+	//}
 }
+
 func (i *inventoryRepository) getCategories() ([]Category, error) {
 	categories := make([]Category, 0)
-	err := i.db.Find(&categories).Error
+	//err := i.db.Find(&categories).Error
+	err := i.db.Preload("Products").Find(&categories).Error
 	if err != nil {
 		return nil, err
 	}
 	return categories, nil
 }
 
+type pp struct {
+	ProductCode string
+}
+
 func (i *inventoryRepository) getProductWithCategory() ([]Product, error) {
+	//category := make([]Category, 0)
 	products := make([]Product, 0)
-	err := i.db.Preload("Category").Find(&products).Error
+
+	//var category Category
+	//err := i.db.Debug().Joins("Category", i.db.Where(&Category{CategoryName: "Sembako"})).Find(&products).Error
+	err := i.db.Debug().Joins("JOIN m_category on m_category.id=m_product.category_id AND m_category.category_name=?", "Sembako").Find(&products).Error
+	//err := i.db.Debug().Table("m_product").Select("product_code").Where("category_id=?", "0e766440-6ab6-43fa-b9c2-e5211039baa8").Scan(&products).Error
+	//category:=[]Category{
+	//	{
+	//		ID:           "0e766440-6ab6-43fa-b9c2-e5211039baa8",
+	//	},
+	//}
+	//err := i.db.Debug().Model(category).Association("Products").Find(&products)
+	//err := i.db.Debug().Preload("Products","product_code=?","A0002").Find(&category).Error
+	//err:=i.db.Debug().Table("m_category").Select("category_name").Scan(&category).Error
 	if err != nil {
 		return nil, err
 	}

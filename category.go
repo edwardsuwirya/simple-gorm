@@ -9,6 +9,7 @@ import (
 type Category struct {
 	ID           string `gorm:"column:id;size:36;primaryKey"`
 	CategoryName string `gorm:"column:category_name;size:255;not null;index:uq_category,unique"`
+	Products     []Product
 	gorm.Model
 }
 
