@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = db.AutoMigrate(&Student{}, &Product{}, &Category{}, &UserInfo{}, &UserCredential{})
+	err = db.AutoMigrate(&Student{}, &Product{}, &Category{}, &UserInfo{}, &UserCredential{}, &Technician{}, &Site{})
 	enigmaDb, err := db.DB()
 	defer func(enigmaDb *sql.DB) {
 		err := enigmaDb.Close()
@@ -38,9 +38,132 @@ func main() {
 	}
 	//newStudentRepository(db)
 	//newInventoryRepository(db)
-	newUserInfoRepository(db)
+	//newUserInfoRepository(db)
+
+	//newSiteRepository(db)
+	newTechnicianRepository(db)
+
 }
 
+// ===================================
+// Technician Sites
+// ===================================
+type siteRepository struct {
+	db *gorm.DB
+}
+
+func newSiteRepository(db *gorm.DB) {
+	repo := new(siteRepository)
+	repo.db = db
+	repo.run()
+}
+func (r *siteRepository) run() {
+	//newSites := []Site{
+	//	{
+	//		SiteName: "Pontianak",
+	//	},
+	//	{
+	//		SiteName: "Bali",
+	//	},
+	//}
+
+	//newSitesWithNewTechnician := []Site{
+	//	{
+	//		SiteName:   "Lombok",
+	//		Technician: []*Technician{
+	//			{
+	//				TechnicianFirstName: "Sudjono",
+	//				TechnicianLastName:  "Maaruf",
+	//				Age:                 45,
+	//			},
+	//		},
+	//	},
+	//}
+
+	newSitesWithExistingTechnician := []Site{
+		{
+			SiteName: "Sumbawa",
+			Technician: []*Technician{
+				{
+					ID: 1,
+				},
+			},
+		},
+	}
+
+	site, err := r.openNewSite(newSitesWithExistingTechnician)
+	if err != nil {
+		return
+	}
+	for _, s := range *site {
+		fmt.Println(s.ToString())
+	}
+}
+func (r *siteRepository) openNewSite(site []Site) (*[]Site, error) {
+	if err := r.db.Create(&site).Error; err != nil {
+		return nil, err
+	}
+	return &site, nil
+}
+
+type technicianRepository struct {
+	db *gorm.DB
+}
+
+func newTechnicianRepository(db *gorm.DB) {
+	repo := new(technicianRepository)
+	repo.db = db
+	repo.run()
+}
+func (r *technicianRepository) run() {
+	//r.registerTechnician()
+	list, err := r.technicianList()
+	if err != nil {
+		return
+	}
+	for _, tech := range list {
+		fmt.Println(tech.ToString())
+	}
+}
+func (r *technicianRepository) registerTechnician() {
+	newTechnician := Technician{
+		TechnicianFirstName: "Mas",
+		TechnicianLastName:  "Duki",
+		Age:                 39,
+		Sites: []*Site{
+			{
+				ID: 1,
+			},
+			{
+				ID: 3,
+			},
+		},
+	}
+	technician, err := r.registerNewTechnician(newTechnician)
+	if err != nil {
+		return
+	}
+	fmt.Println(technician.ToString())
+}
+func (r *technicianRepository) registerNewTechnician(technician Technician) (*Technician, error) {
+	if err := r.db.Create(&technician).Error; err != nil {
+		return nil, err
+	}
+	return &technician, nil
+}
+
+func (r *technicianRepository) technicianList() ([]Technician, error) {
+	var technicians []Technician
+	err := r.db.Debug().Preload("Sites").Find(&technicians).Error
+	if err != nil {
+		return nil, err
+	}
+	return technicians, nil
+}
+
+// ===================================
+// User Information
+// ===================================
 type userInfoRepository struct {
 	db *gorm.DB
 }
@@ -181,6 +304,9 @@ func (r *userInfoRepository) UserValidation(userName string, password string) (b
 	return false, nil
 }
 
+// ===================================
+// Student
+// ===================================
 type studentRepository struct {
 	db *gorm.DB
 }
@@ -257,6 +383,9 @@ func (r *studentRepository) deleteStudent(id int) error {
 	return err
 }
 
+// ===================================
+// Inventory
+// ===================================
 type inventoryRepository struct {
 	db *gorm.DB
 }
@@ -315,7 +444,6 @@ func (i *inventoryRepository) run() {
 	//	fmt.Println(category.ToString())
 	//}
 }
-
 func (i *inventoryRepository) getCategories() ([]Category, error) {
 	categories := make([]Category, 0)
 	//err := i.db.Find(&categories).Error
